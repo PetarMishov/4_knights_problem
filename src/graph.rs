@@ -1,5 +1,6 @@
 use crate::utils;
 use std::collections::{HashMap, VecDeque};
+use std::collections::hash_map::Entry;
 use std::fmt;
 
 pub struct Graph {
@@ -60,10 +61,8 @@ pub fn make_initial_graph(
     bounds: (u8, u8),
 ) -> Graph {
     let mut edges = Vec::new();
-    let seen_white = utils::add_edges(&mut edges, white_mask, valid_position_mask, bounds);
-    let seen_black = utils::add_edges(&mut edges, black_mask, valid_position_mask, bounds);
-    let all_seen = seen_white | seen_black;
-    let vertices: Vec<u8> = utils::iter_bits(all_seen).collect();
+    utils::add_edges(&mut edges, valid_position_mask, bounds);
+    let vertices: Vec<u8> = utils::iter_bits(valid_position_mask).collect();
 
     Graph {
         white_mask,
@@ -106,16 +105,20 @@ pub fn try_solve_graph_bfs(
 
                 let next_white = (white & !(1u64 << (from as u32))) | to_bit;
                 let next_black = black;
+                let prev_k = utils::search_state_key(white, black);
                 let nk = utils::search_state_key(next_white, next_black);
 
-                if !parent.contains_key(&nk) {
-                    parent.insert(nk, (utils::search_state_key(white, black), from, to));
+                match parent.entry(nk) {
+                    Entry::Occupied(_) => continue,
+                    Entry::Vacant(e) => {
+                        e.insert((prev_k, from, to));
 
-                    if utils::is_win(next_white, next_black, white_goal, black_goal) {
-                        return Some(reconstruct_moves(parent, start_k, nk));
+                        if utils::is_win(next_white, next_black, white_goal, black_goal) {
+                            return Some(reconstruct_moves(&parent, start_k, nk));
+                        }
+
+                        q.push_back((next_white, next_black));
                     }
-
-                    q.push_back((next_white, next_black));
                 }
             }
         }
@@ -129,16 +132,20 @@ pub fn try_solve_graph_bfs(
 
                 let next_white = white;
                 let next_black = (black & !(1u64 << (from as u32))) | to_bit;
+                let prev_k = utils::search_state_key(white, black);
                 let nk = utils::search_state_key(next_white, next_black);
 
-                if !parent.contains_key(&nk) {
-                    parent.insert(nk, (utils::search_state_key(white, black), from, to));
+                match parent.entry(nk) {
+                    Entry::Occupied(_) => continue,
+                    Entry::Vacant(e) => {
+                        e.insert((prev_k, from, to));
 
-                    if utils::is_win(next_white, next_black, white_goal, black_goal) {
-                        return Some(reconstruct_moves(parent, start_k, nk));
+                        if utils::is_win(next_white, next_black, white_goal, black_goal) {
+                            return Some(reconstruct_moves(&parent, start_k, nk));
+                        }
+
+                        q.push_back((next_white, next_black));
                     }
-
-                    q.push_back((next_white, next_black));
                 }
             }
         }
@@ -148,7 +155,7 @@ pub fn try_solve_graph_bfs(
 }
 
 fn reconstruct_moves(
-    parent: HashMap<u128, (u128, u8, u8)>,
+    parent: &HashMap<u128, (u128, u8, u8)>,
     start_k: u128,
     mut goal_k: u128,
 ) -> Vec<(i8, i8)> {
