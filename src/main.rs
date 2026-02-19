@@ -37,7 +37,7 @@ fn main() {
     let black_knight_positions: Vec<(u8, u8)> = vec![(3, 0), (3, 2)];
     let white_knight_positions: Vec<(u8, u8)> = vec![(0, 1), (2, 2)];
 
-    let mut valid_position_mask: u64 = u64::MAX >> (63 - (y * x));
+    let mut valid_position_mask: u64 = u64::MAX >> (64 - (y * x));
     valid_position_mask = make_mask(invalid_squares, valid_position_mask, (y, x), false);
 
     let mut black_knight_mask: u64 = 0;
@@ -46,6 +46,7 @@ fn main() {
     let mut white_knight_mask: u64 = 0;
     white_knight_mask = make_mask(white_knight_positions, white_knight_mask, (y, x), true);
 
+    assert!(y <= 8 && x <= 8, "Board dimensions must be <= 8x8");
     assert_eq!(white_knight_mask & black_knight_mask, 0, "Overlapping knights.");
     let all_knights = white_knight_mask | black_knight_mask;
     assert_eq!(all_knights & !valid_position_mask, 0, "Knights in invalid position.");
