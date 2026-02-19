@@ -28,8 +28,8 @@ fn make_mask(
 
 /*
 coord system
-first dim = y (top to bottom)
-second dim = x (left to right)
+first dim = y (bottom to top)
+second dim = x (right to left)
 */
 fn main() {
     let (y, x) = (4, 4);
