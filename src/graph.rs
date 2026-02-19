@@ -61,8 +61,10 @@ pub fn make_initial_graph(
     bounds: (u8, u8),
 ) -> Graph {
     let mut edges = Vec::new();
-    utils::add_edges(&mut edges, valid_position_mask, bounds);
-    let vertices: Vec<u8> = utils::iter_bits(valid_position_mask).collect();
+    let seen_white = utils::add_edges(&mut edges, white_mask, valid_position_mask , bounds);
+    let seen_black = utils::add_edges(&mut edges, black_mask, valid_position_mask, bounds);
+    let all_seen = seen_white | seen_black;
+    let vertices: Vec<u8> = utils::iter_bits(all_seen).collect();
 
     Graph {
         white_mask,

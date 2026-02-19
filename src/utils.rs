@@ -1,3 +1,5 @@
+use crate::utils;
+
 pub fn iter_bits(mut mask: u64) -> impl Iterator<Item = u8> {
     std::iter::from_fn(move || {
         if mask == 0 {
@@ -12,12 +14,12 @@ pub fn iter_bits(mut mask: u64) -> impl Iterator<Item = u8> {
 
 pub fn add_edges(
     edges: &mut Vec<(u8, u8)>,
+    knight_mask: u64,
     valid_position_mask: u64,
-    bounds: (u8, u8),
-) {
+    bounds: (u8, u8), // (rows, cols)
+) -> u64 {
     let rows = bounds.0 as i16;
     let cols = bounds.1 as i16;
-
     let deltas: [(i16, i16); 8] = [
         (2, 1),
         (2, -1),
@@ -29,29 +31,43 @@ pub fn add_edges(
         (-1, -2),
     ];
 
-    for from in iter_bits(valid_position_mask) {
-        let from_i16 = from as i16;
-        let r = from_i16 / cols;
-        let c = from_i16 % cols;
+    let mut seen: u64 = knight_mask & valid_position_mask;
+    let mut jump_from: u64 = seen;
 
-        for &(dr, dc) in &deltas {
-            let nr = r + dr;
-            let nc = c + dc;
-            if nr < 0 || nr >= rows || nc < 0 || nc >= cols {
-                continue;
+    while jump_from != 0 {
+        let mut next_jump_from: u64 = 0;
+
+        for from in utils::iter_bits(jump_from) {
+            let from_i16 = from as i16;
+            let r = from_i16 / cols;
+            let c = from_i16 % cols;
+
+            for &(dr, dc) in &deltas {
+                let nr = r + dr;
+                let nc = c + dc;
+                if nr < 0 || nr >= rows || nc < 0 || nc >= cols {
+                    continue;
+                }
+
+                let to_i16 = nr * cols + nc;
+                let to = to_i16 as u8;
+                let to_bit = 1u64 << (to as u32);
+                if (valid_position_mask & to_bit) == 0 {
+                    continue;
+                }
+                edges.push((from, to));
+                edges.push((to, from));
+                if (seen & to_bit) == 0 {
+                    next_jump_from |= to_bit;
+                }
             }
-
-            let to_i16 = nr * cols + nc;
-            let to = to_i16 as u8;
-            let to_bit = 1u64 << (to as u32);
-
-            if (valid_position_mask & to_bit) == 0 {
-                continue;
-            }
-
-            edges.push((from, to));
         }
+
+        seen |= next_jump_from;
+        jump_from = next_jump_from;
     }
+
+    seen
 }
 
 pub fn is_win(
